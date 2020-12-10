@@ -22,6 +22,7 @@ public class DownloadViewModel {
         this.context = AppContext.getContext();
         String url = "https://oss.zhigujinyun.com/video/zhonghenglong_introduce.mp4";
         String path = context.getExternalCacheDir() + "/zhigujinyun.mp4";
+
         downloader = new Downloader(url, 4, path);
     }
 
