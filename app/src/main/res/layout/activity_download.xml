@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <variable
+            name="vm"
+            type="com.zjp.androidstudy.viewmodel.DownloadViewModel" />
+
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:orientation="vertical"
+        android:layout_height="match_parent">
+
+        <Button
+            android:onClick="@{()-> vm.start()}"
+            android:layout_width="match_parent"
+            android:text="开始下载"
+            android:layout_height="wrap_content" />
+
+
+        <Button
+            android:onClick="@{()-> vm.stop()}"
+            android:layout_width="match_parent"
+            android:text="停止下载"
+            android:layout_height="wrap_content" />
+
+
+
+    </LinearLayout>
+</layout>
