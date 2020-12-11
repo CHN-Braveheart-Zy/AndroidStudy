@@ -48,7 +48,7 @@ public class Downloader {
 
 
     public void start() {
-        canceled.compareAndSet(true,false);
+        canceled.set(false);
         THREAD_POOL_EXECUTOR.execute(new Runnable() {
             @Override
             public void run() {
@@ -61,10 +61,9 @@ public class Downloader {
                 System.out.println(" 开始下载：" + url);
                 if ((fileSize = getFileSize()) < 0) return;
                 System.out.printf(" 文件大小：%.2fMB\n", (fileSize / 1024.0f / 1024.0f));
-
                 beginTime = System.currentTimeMillis();
                 try {
-                    file = new DownloadFile(fileName, fileSize,logger);
+                    file = new DownloadFile(fileName, fileSize, logger);
                     if (restartable) {
                         file.setWroteSize(logger.getWroteSize());
                     }
@@ -85,22 +84,24 @@ public class Downloader {
 
     /**
      * 分配器，决定每个线程下载哪个区间的数据
+     *
      * @param breakpoint
      */
     private void dispatcher(boolean breakpoint) {
         long blockSize = fileSize / threadCount; // 每个线程要下载的数据量
         long lowerBound, upperBound;
         int threadID;
-        Logger.MyProp prop = logger.getProp();
+        Logger.LogProperties prop = logger.getProperties();
         for (int i = 0; i < threadCount; i++) {
             if (breakpoint) {
                 threadID = i;
                 lowerBound = prop.getThreadInfo().get("thread-" + i);
+                upperBound = (i == threadCount - 1) ? fileSize - 1 : blockSize * (i + 1);
             } else {
                 threadID = i;
                 lowerBound = i * blockSize;
+                upperBound = (i == threadCount - 1) ? fileSize - 1 : lowerBound + blockSize;
             }
-            upperBound = (i == threadCount - 1) ? fileSize - 1 : lowerBound + blockSize;
             THREAD_POOL_EXECUTOR.execute(new DownloadTask(url, lowerBound, upperBound, file, canceled, threadID, lock));
         }
     }
@@ -128,6 +129,7 @@ public class Downloader {
             downloadedSize = file.getWroteSize();
         }
         file.close();
+        logger.clearCache();
         if (canceled.get()) {
             try {
 

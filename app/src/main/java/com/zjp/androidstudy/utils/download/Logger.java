@@ -44,12 +44,14 @@ public class Logger {
                 ois = new ObjectInputStream(new FileInputStream(logFile));
                 prop = (LogProperties) ois.readObject();
             } catch (Exception e) {
+                logFile.delete();
                 e.printStackTrace();
             } finally {
                 if (ois != null) {
                     try {
                         ois.close();
                     } catch (IOException e) {
+                        logFile.delete();
                         e.printStackTrace();
                     }
                 }
@@ -79,7 +81,6 @@ public class Logger {
         properties.update(threadID, lowerBound);
         try {
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(logFile));
-            Log.d(TAG, "write: oos: " + oos.toString());
             oos.writeObject(properties);
         } catch (Exception e) {
             Log.e(TAG, "write: " + e.getMessage());
@@ -92,6 +93,12 @@ public class Logger {
 
     public LogProperties getProperties() {
         return properties;
+    }
+
+    public void clearCache() {
+        if (logFile.exists()) {
+            logFile.delete();
+        }
     }
 
     static class LogProperties implements Serializable {
