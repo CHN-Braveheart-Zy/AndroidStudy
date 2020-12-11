@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.nio.channels.Channels;
 import java.util.HashMap;
 
 public class Logger {
@@ -20,33 +19,30 @@ public class Logger {
     private String fileName;    //下载的文件名字
     private String url;         //下载连接
     private int threadCount; //线程数量
-    private MyProp prop;
-    private ObjectOutputStream oos;
+    private LogProperties properties;
+
+    private File logFile;
 
 
-    private String logPath; // 下载的文件的名字
-    private File file;
-
-
-    public Logger(String filePath, String url, int threadCount) {
-        this.fileName = filePath;
+    public Logger(String fileName, String url, int threadCount) {
+        this.fileName = fileName;
         this.url = url;
         this.threadCount = threadCount;
-        file = new File(AppContext.getContext().getExternalCacheDir() + "/download.log");
+        logFile = new File(AppContext.getContext().getExternalCacheDir() + "/download.log");
     }
 
     /**
-     * 是否有需要重新开始
+     * 是否可以断点下载
      *
      * @return
      */
     public boolean breakpoint() {
-        MyProp prop = null;
-        if (file.exists()) {
+        LogProperties prop = null;
+        if (logFile.exists()) {
             ObjectInputStream ois = null;
             try {
-                ois = new ObjectInputStream(new FileInputStream(file));
-                prop = (MyProp) ois.readObject();
+                ois = new ObjectInputStream(new FileInputStream(logFile));
+                prop = (LogProperties) ois.readObject();
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -59,14 +55,14 @@ public class Logger {
                 }
             }
         }
-        //有缓存
+        //有缓存对比和上次文件是否一样
         if (prop != null && prop.threadCount == this.threadCount && TextUtils.equals(fileName, prop.fileName)
                 && TextUtils.equals(prop.url, url)) {
-            this.prop = prop;
+            this.properties = prop;
             return true;
         }
-        //有缓存   对比和上次文件是否一样
-        this.prop = new MyProp(fileName, url, threadCount);
+        //没有缓存
+        this.properties = new LogProperties(fileName, url, threadCount);
         return false;
     }
 
@@ -79,44 +75,54 @@ public class Logger {
      * @param upperBound 结束位置
      */
     public void write(int threadID, long length, long lowerBound, long upperBound) {
-        prop.setWroteSize(prop.getWroteSize() + length);    //写入总大小
-        prop.update(threadID, lowerBound);
+        properties.setWroteSize(properties.getWroteSize() + length);    //写入总大小
+        properties.update(threadID, lowerBound);
         try {
-            oos = new ObjectOutputStream(new FileOutputStream(file));
-            oos.writeObject(prop);
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(logFile));
+            Log.d(TAG, "write: oos: " + oos.toString());
+            oos.writeObject(properties);
         } catch (Exception e) {
             Log.e(TAG, "write: " + e.getMessage());
         }
     }
 
     public Long getWroteSize() {
-        return prop.getWroteSize();
+        return properties.getWroteSize();
     }
 
-    public MyProp getProp() {
-        return prop;
+    public LogProperties getProperties() {
+        return properties;
     }
 
-    static class MyProp implements Serializable {
+    static class LogProperties implements Serializable {
         private String fileName;    //下载的文件名字
         private String url;         //下载连接
         private int threadCount; //线程数量
         private HashMap<String, Long> threadInfo; //线程id- 线程起始
         private Long wroteSize;
+        private Long fileSize;
 
-        public MyProp(String fileName, String url, int threadCount) {
+        public LogProperties(String fileName, String url, int threadCount) {
             this.fileName = fileName;
             this.url = url;
             this.threadCount = threadCount;
             this.wroteSize = 0L;
             this.threadInfo = new HashMap<>(threadCount);
-            initThreadInfo();
+            createThreadKV();
         }
 
-        public void initThreadInfo() {
+        public void createThreadKV() {
             for (int i = 0; i < threadCount; i++) {
                 threadInfo.put("thread-" + i, 0L);
             }
+        }
+
+        public Long getFileSize() {
+            return fileSize;
+        }
+
+        public void setFileSize(Long fileSize) {
+            this.fileSize = fileSize;
         }
 
         public String getFileName() {
