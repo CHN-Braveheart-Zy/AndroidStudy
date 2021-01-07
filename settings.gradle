@@ -1,2 +1,3 @@
+include ':CommonUtils'
 include ':app'
 rootProject.name = "AndroidStudy"
